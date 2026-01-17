@@ -8,50 +8,77 @@
     <style>
         :root { --bg: #000; --card: #1c1c1e; --accent: #0A84FF; --text: #fff; }
         body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        h1 { font-size: 26px; font-weight: 700; margin: 10px 0 30px 0; }
+        
+        h1 { font-size: 24px; font-weight: 700; margin: 10px 0 30px 0; text-align: left; }
+
         .category-section { margin-bottom: 30px; }
-        .category-title { font-size: 13px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; border-bottom: 1px solid #2c2c2e; padding-bottom: 5px; }
-        .tile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .tile { background: var(--card); border-radius: 14px; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1 / 1; border: 1px solid #2c2c2e; }
-        .tile-icon { font-size: 18px; font-weight: 700; color: var(--accent); background: #2c2c2e; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin-bottom: 6px; }
-        .tile-name { font-size: 11px; font-weight: 500; text-align: center; width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .category-title { 
+            font-size: 12px; color: #8e8e93; text-transform: uppercase; 
+            letter-spacing: 1px; margin-bottom: 15px; font-weight: 600; 
+            border-bottom: 0.5px solid #2c2c2e; padding-bottom: 8px;
+        }
+
+        /* FIXED: This makes tiles smaller by adding more columns */
+        .tile-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); 
+            gap: 15px; 
+        }
+
+        .tile { 
+            background: var(--card); border-radius: 18px; text-decoration: none; 
+            color: white; display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; aspect-ratio: 1 / 1; border: 1px solid #2c2c2e;
+            max-width: 100px; /* Ensures tiles never get "giant" */
+            margin: 0 auto;
+        }
+        
+        .tile:active { transform: scale(0.92); background: #2c2c2e; }
+
+        /* Icon looks like an iOS App Icon */
+        .tile-icon { 
+            font-size: 16px; font-weight: 700; color: var(--accent); 
+            background: #262626; width: 45px; height: 45px; 
+            display: flex; align-items: center; justify-content: center; 
+            border-radius: 12px; margin-bottom: 8px; 
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+
+        .tile-name { 
+            font-size: 10px; font-weight: 500; text-align: center; 
+            width: 80px; overflow: hidden; text-overflow: ellipsis; 
+            white-space: nowrap; color: #efeff4;
+        }
     </style>
 </head>
 <body>
     <h1>The Vault</h1>
-    <div id="vault-content">Connecting...</div>
+    <div id="vault-content"></div>
 
     <script>
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPHKADiAyC6YoAsqpE_Z_UhGvXws3gk0gNGY1WYqDl6CWdtVh8u_rb4xuZAE-WAdbjgxALYrGBGczy/pub?gid=0&single=true&output=csv'; // <--- ENSURE THIS ENDS IN output=csv
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPHKADiAyC6YoAsqpE_Z_UhGvXws3gk0gNGY1WYqDl6CWdtVh8u_rb4xuZAE-WAdbjgxALYrGBGczy/pub?gid=0&single=true&output=csv'; 
 
         async function loadVault() {
             try {
                 const response = await fetch(sheetUrl);
                 const text = await response.text();
-                
-                // Break text into lines and clean up whitespace
-                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0).slice(1);
                 
                 const categories = {};
 
-                // Skip the first row (headers) and process the rest
-                for (let i = 1; i < lines.length; i++) {
-                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    
+                lines.forEach(line => {
+                    const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 2) {
                         const name = cols[0].replace(/["']/g, "").trim();
                         const url = cols[1].replace(/["']/g, "").trim();
-                        const cat = (cols[2] || "Uncategorized").replace(/["']/g, "").trim();
+                        const cat = (cols[2] || "General").replace(/["']/g, "").trim();
 
-                        // SKIP junk rows (if name is "0" or "arial" or too short)
-                        if (name.toLowerCase() === "arial" || name === "0" || !url.startsWith("http")) {
-                            continue; 
+                        if (url.startsWith("http") && name.toLowerCase() !== "arial") {
+                            if (!categories[cat]) categories[cat] = [];
+                            categories[cat].push({ name, url });
                         }
-
-                        if (!categories[cat]) categories[cat] = [];
-                        categories[cat].push({ name, url });
                     }
-                }
+                });
 
                 const content = document.getElementById('vault-content');
                 content.innerHTML = '';
@@ -65,10 +92,7 @@
                     html += `</div></div>`;
                     content.innerHTML += html;
                 });
-
-            } catch (err) {
-                document.getElementById('vault-content').innerHTML = "Error loading. Check CSV link.";
-            }
+            } catch (err) { console.error(err); }
         }
         loadVault();
     </script>
