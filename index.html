@@ -1,150 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Vault Cloud</title>
+    <title>The Vault</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        :root { --bg: #f8f9fa; --primary: #1a1a1a; --blue: #007bff; --green: #28a745; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        
-        /* Search and Nav */
-        #searchBar { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 25px; border: 1px solid #ddd; box-sizing: border-box; }
-        nav { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .nav-btn { padding: 10px 20px; border: none; background: #fff; border-radius: 20px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .nav-btn.active { background: var(--primary); color: white; }
-
-        /* The Grid */
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid #ddd; display: flex; flex-direction: column; }
-        .source-card { border-top-color: var(--blue); }
-        .article-card { border-top-color: #6c757d; }
-        .finished-card { border-top-color: var(--green); opacity: 0.8; }
-        .hidden { display: none; }
-        
-        /* Inputs */
-        .input-group { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-        input, select, button.add-btn { width: 100%; padding: 10px; margin-top: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button.add-btn { background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
-        
-        .loading-msg { text-align: center; color: var(--blue); font-weight: bold; padding: 20px; }
+        body { font-family: -apple-system, sans-serif; background: #121212; color: white; padding: 20px; }
+        .tile-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+        .tile { 
+            background: #1e1e1e; border: 1px solid #333; border-radius: 12px; 
+            padding: 20px; text-align: center; text-decoration: none; color: white;
+            display: flex; flex-direction: column; align-items: center; aspect-ratio: 1/1; justify-content: center;
+        }
+        .tile-icon { font-size: 24px; margin-bottom: 8px; color: #007aff; font-weight: bold; }
+        .tile-name { font-size: 13px; }
     </style>
 </head>
 <body>
+    <h1>THE VAULT</h1>
+    <div id="links" class="tile-container">Loading tiles...</div>
 
-<div class="container">
-    <div class="input-group">
-        <input type="text" id="title" placeholder="Title">
-        <input type="text" id="url" placeholder="URL">
-        <select id="type">
-            <option value="source">Main Source (Website Home)</option>
-            <option value="article">Specific Article</option>
-        </select>
-        <button class="add-btn" onclick="addItem()">Add to Hub</button>
-    </div>
+    <script>
+        // REPLACE THE URL BELOW WITH YOUR PUBLISHED CSV LINK
+        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPHKADiAyC6YoAsqpE_Z_UhGvXws3gk0gNGY1WYqDl6CWdtVh8u_rb4xuZAE-WAdbjgxALYrGBGczy/pub?gid=0&single=true&output=csv';
 
-    <input type="text" id="searchBar" placeholder="🔍 Search..." oninput="render()">
+        async function loadTiles() {
+            const response = await fetch(sheetUrl);
+            const data = await response.text();
+            const rows = data.split('\n').slice(1); // Skip header row
+            const container = document.getElementById('links');
+            container.innerHTML = ''; 
 
-    <nav>
-        <button class="nav-btn active" onclick="switchTab('sources', this)">🌐 Sources</button>
-        <button class="nav-btn" onclick="switchTab('reading', this)">📖 To Read</button>
-        <button class="nav-btn" onclick="switchTab('finished', this)">✅ Finished</button>
-    </nav>
-
-    <div id="loading" class="loading-msg hidden">Syncing with Cloud...</div>
-    <div id="sources" class="grid"></div>
-    <div id="reading" class="grid hidden"></div>
-    <div id="finished" class="grid hidden"></div>
-</div>
-
-<script>
-    const API_URL = 'https://sheetdb.io/api/v1/mamkx31kefav9'; 
-    let data = [];
-    let currentTab = 'sources';
-
-    // FETCH DATA FROM CLOUD
-    async function loadData() {
-        document.getElementById('loading').classList.remove('hidden');
-        try {
-            const response = await fetch(API_URL);
-            data = await response.json();
-            render();
-        } catch (e) { console.error("Load failed", e); }
-        document.getElementById('loading').classList.add('hidden');
-    }
-
-    // ADD ITEM TO CLOUD
-    async function addItem() {
-        const newItem = {
-            title: document.getElementById('title').value,
-            url: document.getElementById('url').value,
-            type: document.getElementById('type').value,
-            progress: 0,
-            id: Date.now().toString()
-        };
-        if(!newItem.title || !newItem.url) return;
-
-        data.push(newItem);
-        render();
-        await fetch(API_URL, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify([newItem])
-        });
-    }
-
-    // UPDATE PROGRESS
-    async function updateProgress(id, val) {
-        const item = data.find(i => i.id == id);
-        item.progress = parseInt(val);
-        render();
-        // Update in Google Sheet (SheetDB search update)
-        await fetch(`${API_URL}/id/${id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ progress: val })
-        });
-    }
-
-    function switchTab(tabId, btn) {
-        currentTab = tabId;
-        document.querySelectorAll('.grid').forEach(g => g.classList.add('hidden'));
-        document.getElementById(tabId).classList.remove('hidden');
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        render();
-    }
-
-    function render() {
-        const searchTerm = document.getElementById('searchBar').value.toLowerCase();
-        const containers = {
-            sources: document.getElementById('sources'),
-            reading: document.getElementById('reading'),
-            finished: document.getElementById('finished')
-        };
-        Object.values(containers).forEach(c => c.innerHTML = '');
-
-        data.forEach(item => {
-            if (!item.title.toLowerCase().includes(searchTerm)) return;
-
-            const card = document.createElement('div');
-            card.className = `card ${item.type === 'source' ? 'source-card' : (item.progress >= 100 ? 'finished-card' : 'article-card')}`;
-            card.innerHTML = `
-                <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; font-weight:bold;">${item.title}</a>
-                ${item.type === 'article' ? `
-                    <input type="range" style="width:100%" min="0" max="100" value="${item.progress}" onchange="updateProgress('${item.id}', this.value)">
-                    <small>${item.progress}% Read</small>
-                ` : ''}
-            `;
-
-            if(item.type === 'source') containers.sources.appendChild(card);
-            else if (item.progress < 100) containers.reading.appendChild(card);
-            else containers.finished.appendChild(card);
-        });
-    }
-
-    loadData();
-</script>
+            rows.forEach(row => {
+                const cols = row.split(',');
+                if (cols.length >= 2) {
+                    const name = cols[0].trim();
+                    const url = cols[1].trim();
+                    const initials = name.substring(0, 2).toUpperCase();
+                    container.innerHTML += `
+                        <a class="tile" href="${url}" target="_blank">
+                            <div class="tile-icon">${initials}</div>
+                            <div class="tile-name">${name}</div>
+                        </a>`;
+                }
+            });
+        }
+        loadTiles();
+    </script>
 </body>
 </html>
