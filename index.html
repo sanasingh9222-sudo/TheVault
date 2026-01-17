@@ -2,79 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>The Vault</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
-
+    <title>The Vault</title>
     <style>
-        :root { --bg: #121212; --tile-bg: #1e1e1e; --accent: #007aff; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: white; padding: 40px 20px; margin: 0; }
-        
-        h1 { font-size: 24px; font-weight: 700; margin-bottom: 30px; text-align: center; color: #fff; letter-spacing: -0.5px; }
-        
-        .category-section { margin-bottom: 35px; }
-        .category-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; font-weight: 600; }
-        
-        .tile-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        
-        .tile { 
-            background: var(--tile-bg); border-radius: 16px; 
-            text-decoration: none; color: white;
-            display: flex; flex-direction: column; align-items: center; 
-            aspect-ratio: 1/1; justify-content: center;
-            transition: transform 0.1s; border: 1px solid #2c2c2e;
+        :root {
+            --bg: #000000;
+            --card: #1c1c1e;
+            --accent: #0A84FF;
+            --text: #ffffff;
+            --text-secondary: #8e8e93;
         }
-        .tile:active { transform: scale(0.92); background: #2c2c2e; }
-        
-        .tile-icon { font-size: 18px; margin-bottom: 6px; color: var(--accent); font-weight: 700; background: #262626; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
-        .tile-name { font-size: 11px; font-weight: 500; text-align: center; padding: 0 5px; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1 { font-size: 28px; font-weight: 700; margin: 20px 0; text-align: left; }
+
+        .category-section { margin-bottom: 30px; }
+        .category-title { 
+            font-size: 13px; 
+            color: var(--text-secondary); 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 12px; 
+            font-weight: 600;
+        }
+
+        /* This creates the 3-column grid for the tiles */
+        .tile-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 12px; 
+        }
+
+        .tile { 
+            background: var(--card); 
+            border-radius: 12px; 
+            text-decoration: none; 
+            color: white;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            aspect-ratio: 1 / 1; /* Keeps them perfectly square */
+            transition: transform 0.1s;
+        }
+        .tile:active { transform: scale(0.95); background: #2c2c2e; }
+
+        .tile-icon { 
+            font-size: 18px; 
+            font-weight: 700; 
+            color: var(--accent); 
+            background: #2c2c2e; 
+            width: 40px; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .tile-name { 
+            font-size: 11px; 
+            font-weight: 500; 
+            text-align: center; 
+            width: 90%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
-    <h1>THE VAULT</h1>
-    <div id="vault-content">Updating your library...</div>
+    <h1>The Vault</h1>
+    <div id="vault-content"></div>
 
     <script>
-        // REPLACE WITH YOUR CSV LINK
-        const sheetUrl = 'YOUR_CSV_URL_HERE'; 
+        const sheetUrl = 'YOUR_CSV_URL_HERE'; // <--- PASTE YOUR CSV LINK HERE
 
         async function loadVault() {
             try {
                 const response = await fetch(sheetUrl);
-                const data = await response.text();
+                const text = await response.text();
+                // Skip the header row and filter out empty lines
+                const lines = text.split('\n').slice(1).filter(line => line.trim() !== "");
                 
-                // .slice(1) removes the header row from your Excel/Google Sheet
-                const rows = data.split('\n').map(r => r.trim()).filter(r => r !== "").slice(1);
-                
-                const contentDiv = document.getElementById('vault-content');
                 const categories = {};
 
-                rows.forEach(row => {
-                    // This handles commas inside quotes (if your titles have commas)
-                    const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
-                    if (cols.length >= 2) {
-                        const name = cols[0].replace(/"/g, '').trim();
-                        const url = cols[1].replace(/"/g, '').trim();
-                        const cat = (cols[2] || 'Other').replace(/"/g, '').trim();
+                lines.forEach(line => {
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        const name = parts[0].trim();
+                        const url = parts[1].trim();
+                        const cat = parts[2] ? parts[2].trim() : 'General';
                         
                         if (!categories[cat]) categories[cat] = [];
-                        categories[cat].push({name, url});
+                        categories[cat].push({ name, url });
                     }
                 });
 
-                contentDiv.innerHTML = '';
-                for (const [category, links] of Object.entries(categories)) {
-                    let sectionHtml = `<div class="category-section"><div class="category-title">${category}</div><div class="tile-container">`;
+                const content = document.getElementById('vault-content');
+                content.innerHTML = '';
+
+                for (const [title, links] of Object.entries(categories)) {
+                    let html = `<div class="category-section">
+                        <div class="category-title">${title}</div>
+                        <div class="tile-grid">`;
+                    
                     links.forEach(link => {
                         const initials = link.name.substring(0, 2).toUpperCase();
-                        sectionHtml += `<a class="tile" href="${link.url}" target="_blank"><div class="tile-icon">${initials}</div><div class="tile-name">${link.name}</div></a>`;
+                        html += `
+                            <a href="${link.url}" class="tile" target="_blank">
+                                <div class="tile-icon">${initials}</div>
+                                <div class="tile-name">${link.name}</div>
+                            </a>`;
                     });
-                    sectionHtml += `</div></div>`;
-                    contentDiv.innerHTML += sectionHtml;
+                    html += `</div></div>`;
+                    content.innerHTML += html;
                 }
-            } catch (e) { document.getElementById('vault-content').innerHTML = "Error loading sheet. Check your CSV link."; }
+            } catch (err) {
+                document.getElementById('vault-content').innerHTML = "Error loading data.";
+            }
         }
         loadVault();
     </script>
