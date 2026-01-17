@@ -1,50 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>The Vault</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+
     <style>
-        body { font-family: -apple-system, sans-serif; background: #121212; color: white; padding: 20px; }
-        .tile-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+        :root { --bg: #121212; --tile-bg: #1e1e1e; --accent: #007aff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: white; padding: 40px 20px; margin: 0; }
+        
+        h1 { font-size: 24px; font-weight: 700; margin-bottom: 30px; text-align: center; color: #fff; letter-spacing: -0.5px; }
+        
+        .category-section { margin-bottom: 35px; }
+        .category-title { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; font-weight: 600; }
+        
+        .tile-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        
         .tile { 
-            background: #1e1e1e; border: 1px solid #333; border-radius: 12px; 
-            padding: 20px; text-align: center; text-decoration: none; color: white;
-            display: flex; flex-direction: column; align-items: center; aspect-ratio: 1/1; justify-content: center;
+            background: var(--tile-bg); border-radius: 16px; 
+            text-decoration: none; color: white;
+            display: flex; flex-direction: column; align-items: center; 
+            aspect-ratio: 1/1; justify-content: center;
+            transition: transform 0.1s; border: 1px solid #2c2c2e;
         }
-        .tile-icon { font-size: 24px; margin-bottom: 8px; color: #007aff; font-weight: bold; }
-        .tile-name { font-size: 13px; }
+        .tile:active { transform: scale(0.92); background: #2c2c2e; }
+        
+        .tile-icon { font-size: 18px; margin-bottom: 6px; color: var(--accent); font-weight: 700; background: #262626; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+        .tile-name { font-size: 11px; font-weight: 500; text-align: center; padding: 0 5px; }
     </style>
 </head>
 <body>
     <h1>THE VAULT</h1>
-    <div id="links" class="tile-container">Loading tiles...</div>
+    <div id="vault-content">Updating your library...</div>
 
     <script>
-        // REPLACE THE URL BELOW WITH YOUR PUBLISHED CSV LINK
-        const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSPHKADiAyC6YoAsqpE_Z_UhGvXws3gk0gNGY1WYqDl6CWdtVh8u_rb4xuZAE-WAdbjgxALYrGBGczy/pub?gid=0&single=true&output=csv';
+        // REPLACE WITH YOUR CSV LINK
+        const sheetUrl = 'YOUR_CSV_URL_HERE'; 
 
-        async function loadTiles() {
-            const response = await fetch(sheetUrl);
-            const data = await response.text();
-            const rows = data.split('\n').slice(1); // Skip header row
-            const container = document.getElementById('links');
-            container.innerHTML = ''; 
+        async function loadVault() {
+            try {
+                const response = await fetch(sheetUrl);
+                const data = await response.text();
+                
+                // .slice(1) removes the header row from your Excel/Google Sheet
+                const rows = data.split('\n').map(r => r.trim()).filter(r => r !== "").slice(1);
+                
+                const contentDiv = document.getElementById('vault-content');
+                const categories = {};
 
-            rows.forEach(row => {
-                const cols = row.split(',');
-                if (cols.length >= 2) {
-                    const name = cols[0].trim();
-                    const url = cols[1].trim();
-                    const initials = name.substring(0, 2).toUpperCase();
-                    container.innerHTML += `
-                        <a class="tile" href="${url}" target="_blank">
-                            <div class="tile-icon">${initials}</div>
-                            <div class="tile-name">${name}</div>
-                        </a>`;
+                rows.forEach(row => {
+                    // This handles commas inside quotes (if your titles have commas)
+                    const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
+                    if (cols.length >= 2) {
+                        const name = cols[0].replace(/"/g, '').trim();
+                        const url = cols[1].replace(/"/g, '').trim();
+                        const cat = (cols[2] || 'Other').replace(/"/g, '').trim();
+                        
+                        if (!categories[cat]) categories[cat] = [];
+                        categories[cat].push({name, url});
+                    }
+                });
+
+                contentDiv.innerHTML = '';
+                for (const [category, links] of Object.entries(categories)) {
+                    let sectionHtml = `<div class="category-section"><div class="category-title">${category}</div><div class="tile-container">`;
+                    links.forEach(link => {
+                        const initials = link.name.substring(0, 2).toUpperCase();
+                        sectionHtml += `<a class="tile" href="${link.url}" target="_blank"><div class="tile-icon">${initials}</div><div class="tile-name">${link.name}</div></a>`;
+                    });
+                    sectionHtml += `</div></div>`;
+                    contentDiv.innerHTML += sectionHtml;
                 }
-            });
+            } catch (e) { document.getElementById('vault-content').innerHTML = "Error loading sheet. Check your CSV link."; }
         }
-        loadTiles();
+        loadVault();
     </script>
 </body>
 </html>
