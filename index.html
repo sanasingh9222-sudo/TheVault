@@ -11,40 +11,110 @@
 
     <style>
         :root { --bg: #000; --card: #1c1c1e; --accent: #0A84FF; --text: #fff; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; padding-bottom: 150px; }
-        h1 { font-size: 24px; font-weight: 700; margin: 10px 0 30px 0; }
-        .category-section { margin-bottom: 30px; }
-        .category-title { font-size: 12px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; border-bottom: 1px solid #2c2c2e; padding-bottom: 5px; }
-        .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 12px; }
-        .tile { background: var(--card); border-radius: 14px; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1 / 1; border: 1px solid #2c2c2e; transition: transform 0.1s; }
-        .tile:active { transform: scale(0.95); }
-        .tile-icon { font-size: 18px; font-weight: 700; color: var(--accent); background: #262626; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin-bottom: 6px; }
-        .tile-name { font-size: 11px; text-align: center; width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; padding-bottom: 180px; }
         
+        h1 { font-size: 24px; font-weight: 700; margin: 10px 0 30px 0; }
+
+        .category-section { margin-bottom: 30px; }
+        .category-title { font-size: 12px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; font-weight: 600; border-bottom: 1px solid #2c2c2e; padding-bottom: 5px; }
+
+        /* Kindle Shelf Styles */
+        .tile-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
+            gap: 20px; 
+        }
+
+        .tile { 
+            background: #2c2c2e; 
+            border-radius: 6px;
+            text-decoration: none; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            aspect-ratio: 2 / 3; 
+            border: 1px solid #3a3a3c;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .tile:active { transform: scale(0.95); }
+
+        .tile-cover {
+            flex: 1;
+            background: #1c1c1e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .tile-cover img {
+            width: 50%;
+            height: auto;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        .tile-info {
+            background: #1c1c1e;
+            padding: 8px 5px;
+            border-top: 1px solid #333;
+        }
+
+        .tile-name { 
+            font-size: 10px; 
+            font-weight: 600; 
+            text-align: center; 
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #e5e5e7;
+        }
+
+        /* Delete Button */
+        .del-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 59, 48, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* Fixed Form at Bottom */
-        .admin-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #1c1c1e; padding: 20px; border-top: 1px solid #333; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
+        .admin-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #1c1c1e; padding: 20px; border-top: 1px solid #333; z-index: 100; }
         .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        input, select { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #2c2c2e; color: white; font-size: 14px; outline: none; }
-        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; }
+        input, select { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #2c2c2e; color: white; font-size: 14px; }
+        button#main-add { width: 100%; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; }
     </style>
 
     <script>
-        // --- 2. PASTE YOUR REAL CONFIG HERE ---
         const firebaseConfig = {
             apiKey: "AIzaSyAci66jWCRg_X6FfCWz8FYNKtRqWM--O4s",
-    authDomain: "thevault-fb14e.firebaseapp.com",
-    projectId: "thevault-fb14e",
-    storageBucket: "thevault-fb14e.firebasestorage.app",
-    messagingSenderId: "181855705164",
-    appId: "1:181855705164:web:2508720fe5669d4f0ebce9",
-    measurementId: "G-02L0R40YBF"
+            authDomain: "thevault-fb14e.firebaseapp.com",
+            projectId: "thevault-fb14e",
+            storageBucket: "thevault-fb14e.firebasestorage.app",
+            messagingSenderId: "181855705164",
+            appId: "1:181855705164:web:2508720fe5669d4f0ebce9",
+            measurementId: "G-02L0R40YBF"
         };
 
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // 3. DEFINE THE FUNCTION FIRST
         async function addBookmark() {
             const nameEl = document.getElementById('siteName');
             const urlEl = document.getElementById('siteUrl');
@@ -64,62 +134,3 @@
                 });
                 nameEl.value = '';
                 urlEl.value = '';
-                alert("Saved!");
-            } catch (e) {
-                alert("Error: " + e.message);
-            }
-        }
-
-        // 4. SETUP THE LIVE VIEW
-        window.onload = function() {
-            db.collection("bookmarks").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-                const categories = {};
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (!categories[data.category]) categories[data.category] = [];
-                    categories[data.category].push(data);
-                });
-
-                const content = document.getElementById('vault-content');
-                content.innerHTML = '';
-
-                if (Object.keys(categories).length === 0) {
-                    content.innerHTML = '<p style="color:#666; text-align:center;">Vault is empty.</p>';
-                }
-
-                Object.keys(categories).sort().forEach(cat => {
-                    let html = `<div class="category-section"><div class="category-title">${cat}</div><div class="tile-grid">`;
-                    categories[cat].forEach(item => {
-                        const initials = item.name.substring(0,2).toUpperCase();
-                        html += `<a href="${item.url}" class="tile" target="_blank">
-                                    <div class="tile-icon">${initials}</div>
-                                    <div class="tile-name">${item.name}</div>
-                                 </a>`;
-                    });
-                    html += `</div></div>`;
-                    content.innerHTML += html;
-                });
-            });
-        };
-    </script>
-</head>
-<body>
-
-    <h1>The Vault</h1>
-    <div id="vault-content">Connecting to database...</div>
-
-    <div class="admin-panel">
-        <div class="form-row">
-            <input type="text" id="siteName" placeholder="Name">
-            <select id="siteCat">
-                <option value="Source">Source</option>
-                <option value="Read">Read</option>
-                <option value="To Be Read">To Be Read</option>
-            </select>
-        </div>
-        <input type="text" id="siteUrl" placeholder="URL (https://...)" style="margin-bottom:10px;">
-        <button onclick="addBookmark()">Add to Vault</button>
-    </div>
-
-</body>
-</html>
