@@ -1,94 +1,125 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>The Vault</title>
+
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <style>
         :root { --bg: #000; --card: #1c1c1e; --accent: #0A84FF; --text: #fff; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; padding-bottom: 150px; }
+        h1 { font-size: 24px; font-weight: 700; margin: 10px 0 30px 0; }
         .category-section { margin-bottom: 30px; }
-        .category-title { font-size: 13px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; border-bottom: 1px solid #2c2c2e; padding-bottom: 5px; }
+        .category-title { font-size: 12px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; border-bottom: 1px solid #2c2c2e; padding-bottom: 5px; }
         .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 12px; }
-        .tile { background: var(--card); border-radius: 14px; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1 / 1; border: 1px solid #2c2c2e; position: relative; }
-        .tile-icon { font-size: 18px; font-weight: 700; color: var(--accent); background: #2c2c2e; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin-bottom: 6px; }
-        .tile-name { font-size: 11px; text-align: center; width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tile { background: var(--card); border-radius: 14px; text-decoration: none; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1 / 1; border: 1px solid #2c2c2e; transition: transform 0.1s; }
+        .tile:active { transform: scale(0.95); }
+        .tile-icon { font-size: 18px; font-weight: 700; color: var(--accent); background: #262626; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 10px; margin-bottom: 6px; }
+        .tile-name { font-size: 11px; text-align: center; width: 85%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
-        /* The "Add" Form at the bottom */
-        .admin-panel { background: #1c1c1e; padding: 20px; border-radius: 15px; margin-top: 50px; border: 1px solid #333; }
-        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; background: #2c2c2e; color: white; font-size: 14px; box-sizing: border-box; }
-        button { background: var(--accent); font-weight: bold; }
+        /* Fixed Form at Bottom */
+        .admin-panel { position: fixed; bottom: 0; left: 0; right: 0; background: #1c1c1e; padding: 20px; border-top: 1px solid #333; z-index: 100; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        input, select { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #2c2c2e; color: white; font-size: 14px; outline: none; }
+        button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: var(--accent); color: white; font-weight: bold; font-size: 16px; }
     </style>
-</head>
-<body>
-    <h1>The Vault</h1>
-    <div id="vault-content">Loading live database...</div>
-
-    <div class="admin-panel">
-        <h2 style="font-size: 16px; margin-top: 0;">Add New Bookmark</h2>
-        <input type="text" id="siteName" placeholder="Site Name (e.g. GatesNotes)">
-        <input type="text" id="siteUrl" placeholder="URL (https://...)">
-        <select id="siteCat">
-            <option value="Source">Source</option>
-            <option value="Read">Read</option>
-            <option value="To Be Read">To Be Read</option>
-        </select>
-        <button onclick="addBookmark()">Add to Vault</button>
-    </div>
 
     <script>
-        // PASTE YOUR FIREBASE CONFIG HERE
+        // --- 2. PASTE YOUR REAL CONFIG HERE ---
         const firebaseConfig = {
-              apiKey: "AIzaSyAci66jWCRg_X6FfCWz8FYNKtRqWM--O4s",
+            apiKey: "AIzaSyAci66jWCRg_X6FfCWz8FYNKtRqWM--O4s",
     authDomain: "thevault-fb14e.firebaseapp.com",
     projectId: "thevault-fb14e",
     storageBucket: "thevault-fb14e.firebasestorage.app",
     messagingSenderId: "181855705164",
-    appId: "1:181855705164:web:2508720fe56
+    appId: "1:181855705164:web:2508720fe5669d4f0ebce9",
+    measurementId: "G-02L0R40YBF"
         };
 
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Listen for data changes in real-time
-        db.collection("bookmarks").onSnapshot((snapshot) => {
-            const categories = {};
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                if (!categories[data.category]) categories[data.category] = [];
-                categories[data.category].push({ id: doc.id, ...data });
-            });
-
-            const content = document.getElementById('vault-content');
-            content.innerHTML = '';
-            Object.keys(categories).sort().forEach(cat => {
-                let html = `<div class="category-section"><div class="category-title">${cat}</div><div class="tile-grid">`;
-                categories[cat].forEach(item => {
-                    const initials = item.name.substring(0,2).toUpperCase();
-                    html += `<a href="${item.url}" class="tile" target="_blank">
-                                <div class="tile-icon">${initials}</div>
-                                <div class="tile-name">${item.name}</div>
-                             </a>`;
-                });
-                html += `</div></div>`;
-                content.innerHTML += html;
-            });
-        });
-
+        // 3. DEFINE THE FUNCTION FIRST
         async function addBookmark() {
-            const name = document.getElementById('siteName').value;
-            const url = document.getElementById('siteUrl').value;
-            const category = document.getElementById('siteCat').value;
+            const nameEl = document.getElementById('siteName');
+            const urlEl = document.getElementById('siteUrl');
+            const catEl = document.getElementById('siteCat');
 
-            if (name && url) {
-                await db.collection("bookmarks").add({ name, url, category, timestamp: Date.now() });
-                document.getElementById('siteName').value = '';
-                document.getElementById('siteUrl').value = '';
-                alert("Saved to Vault!");
+            if (!nameEl.value || !urlEl.value) {
+                alert("Please fill in both Name and URL");
+                return;
+            }
+
+            try {
+                await db.collection("bookmarks").add({
+                    name: nameEl.value.trim(),
+                    url: urlEl.value.trim(),
+                    category: catEl.value,
+                    timestamp: Date.now()
+                });
+                nameEl.value = '';
+                urlEl.value = '';
+                alert("Saved!");
+            } catch (e) {
+                alert("Error: " + e.message);
             }
         }
+
+        // 4. SETUP THE LIVE VIEW
+        window.onload = function() {
+            db.collection("bookmarks").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                const categories = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (!categories[data.category]) categories[data.category] = [];
+                    categories[data.category].push(data);
+                });
+
+                const content = document.getElementById('vault-content');
+                content.innerHTML = '';
+
+                if (Object.keys(categories).length === 0) {
+                    content.innerHTML = '<p style="color:#666; text-align:center;">Vault is empty.</p>';
+                }
+
+                Object.keys(categories).sort().forEach(cat => {
+                    let html = `<div class="category-section"><div class="category-title">${cat}</div><div class="tile-grid">`;
+                    categories[cat].forEach(item => {
+                        const initials = item.name.substring(0,2).toUpperCase();
+                        html += `<a href="${item.url}" class="tile" target="_blank">
+                                    <div class="tile-icon">${initials}</div>
+                                    <div class="tile-name">${item.name}</div>
+                                 </a>`;
+                    });
+                    html += `</div></div>`;
+                    content.innerHTML += html;
+                });
+            });
+        };
     </script>
+</head>
+<body>
+
+    <h1>The Vault</h1>
+    <div id="vault-content">Connecting to database...</div>
+
+    <div class="admin-panel">
+        <div class="form-row">
+            <input type="text" id="siteName" placeholder="Name">
+            <select id="siteCat">
+                <option value="Source">Source</option>
+                <option value="Read">Read</option>
+                <option value="To Be Read">To Be Read</option>
+            </select>
+        </div>
+        <input type="text" id="siteUrl" placeholder="URL (https://...)" style="margin-bottom:10px;">
+        <button onclick="addBookmark()">Add to Vault</button>
+    </div>
+
 </body>
 </html>
