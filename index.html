@@ -3,149 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>The Vault</title>
 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/readability/0.5.0/Readability.min.js"></script>
 
     <style>
         :root { --bg: #000; --card: #1c1c1e; --accent: #0A84FF; --text: #fff; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; padding-bottom: 240px; }
-        h1 { font-size: 28px; font-weight: 800; margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
         
+        /* Reader View Styling */
+        #reader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 2000; display: none; overflow-y: auto;
+            padding: 80px 20px 100px; box-sizing: border-box;
+        }
+        #reader-content { max-width: 650px; margin: 0 auto; line-height: 1.7; font-size: 19px; color: #ccc; }
+        #reader-content h1 { font-size: 30px; color: #fff; margin-bottom: 10px; }
+        #reader-content img { max-width: 100%; border-radius: 12px; }
+        
+        .reader-close {
+            position: fixed; top: 20px; right: 20px; background: #2c2c2e;
+            color: white; border: none; padding: 10px 20px; border-radius: 20px;
+            font-weight: bold; z-index: 2100; cursor: pointer;
+        }
+
+        /* Existing UI Styles */
+        h1 { font-size: 28px; font-weight: 800; display: flex; align-items: center; justify-content: space-between; }
         .edit-toggle { background: #1c1c1e; color: #8e8e93; border: 1px solid #333; padding: 6px 12px; border-radius: 20px; font-size: 10px; font-weight: 700; cursor: pointer; }
         .edit-active { color: #ff3b30; border-color: #ff3b30; }
-
         .category-section { margin-bottom: 40px; }
         .category-title { font-size: 12px; color: #8e8e93; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 15px; font-weight: 700; border-bottom: 1px solid #2c2c2e; padding-bottom: 8px; }
         .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; }
-        .tile { background: #1c1c1e; border-radius: 12px; text-decoration: none; color: white; display: flex; flex-direction: column; aspect-ratio: 2 / 3; border: 1px solid #333; overflow: hidden; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: opacity 0.5s; }
-        .tile-cover { flex: 1; display: flex; align-items: center; justify-content: center; background: #111; padding: 15px; }
-        .tile-cover img { width: 45px; height: 45px; object-fit: contain; border-radius: 8px; }
+        .tile { background: #1c1c1e; border-radius: 12px; display: flex; flex-direction: column; aspect-ratio: 2 / 3; border: 1px solid #333; overflow: hidden; position: relative; }
+        .tile-cover { flex: 1; display: flex; align-items: center; justify-content: center; background: #111; padding: 15px; cursor: pointer; }
+        .tile-cover img { width: 45px; height: 45px; object-fit: contain; }
         .tile-info { background: #1c1c1e; padding: 10px 5px; border-top: 1px solid #333; }
         .tile-name { font-size: 11px; font-weight: 600; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
         .tile-controls { position: absolute; top: 6px; right: 6px; display: flex; gap: 6px; z-index: 10; }
-        .btn { width: 24px; height: 24px; border: none; border-radius: 50%; color: white; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn { width: 24px; height: 24px; border: none; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; }
         .del-btn { background: rgba(255, 59, 48, 0.9); }
         .move-btn { background: rgba(48, 209, 88, 0.9); }
-        
         .admin-panel { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(28,28,30,0.95); padding: 20px; border-top: 1px solid #333; z-index: 1000; backdrop-filter: blur(20px); }
         .form-row { display: flex; gap: 10px; margin-bottom: 12px; }
-        input, select { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #2c2c2e; color: white; font-size: 15px; }
-        button#main-add { width: 100%; padding: 16px; border-radius: 12px; border: none; background: var(--accent); color: white; font-weight: 700; font-size: 16px; }
+        input, select { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #2c2c2e; color: white; }
+        button#main-add { width: 100%; padding: 16px; border-radius: 12px; border: none; background: #0A84FF; color: white; font-weight: 700; }
     </style>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAci66jWCRg_X6FfCWz8FYNKtRqWM--O4s",
-            authDomain: "thevault-fb14e.firebaseapp.com",
-            projectId: "thevault-fb14e",
-            storageBucket: "thevault-fb14e.firebasestorage.app",
-            messagingSenderId: "181855705164",
-            appId: "1:181855705164:web:2508720fe5669d4f0ebce9"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-
-        let editMode = false;
-        let lastSnap = null;
-
-        function toggleEdit() {
-            editMode = !editMode;
-            const btn = document.getElementById('edit-btn');
-            btn.classList.toggle('edit-active');
-            btn.innerText = editMode ? "DONE" : "EDIT LIBRARY";
-            if(lastSnap) renderVault(lastSnap); // Refresh UI with current data
-        }
-
-        async function addBookmark() {
-            const name = document.getElementById('siteName').value;
-            let url = document.getElementById('siteUrl').value;
-            const cat = document.getElementById('siteCat').value;
-            if (!name || !url) return alert("Missing info");
-            if (!url.startsWith('http')) url = 'https://' + url;
-            try {
-                await db.collection("bookmarks").add({ name, url, category: cat, timestamp: Date.now() });
-                document.getElementById('siteName').value = '';
-                document.getElementById('siteUrl').value = '';
-            } catch (e) { alert(e.message); }
-        }
-
-        async function deleteMe(id, e) {
-            e.preventDefault(); e.stopPropagation();
-            if(confirm("Delete this?")) await db.collection("bookmarks").doc(id).delete();
-        }
-
-        async function moveMe(id, e) {
-            e.preventDefault(); e.stopPropagation();
-            await db.collection("bookmarks").doc(id).update({ category: "The Archives" });
-        }
-
-        function renderVault(snap) {
-            const cats = { "The Library": [], "The Queue": [], "The Archives": [] };
-            snap.forEach(doc => {
-                const data = doc.data();
-                let cat = data.category;
-                if (cat === "Source") cat = "The Library";
-                if (cat === "To Be Read") cat = "The Queue";
-                if (cat === "Read") cat = "The Archives";
-                if (cats[cat]) cats[cat].push({ id: doc.id, ...data });
-            });
-
-            const content = document.getElementById('vault-content');
-            content.innerHTML = '';
-            const shelfOrder = ["The Library", "The Queue", "The Archives"];
-
-            shelfOrder.forEach(catName => {
-                const items = cats[catName];
-                if (!items || items.length === 0) return;
-
-                let gridHtml = `<div class="category-section"><div class="category-title">${catName}</div><div class="tile-grid">`;
-                items.forEach(item => {
-                    let domain = "";
-                    try { domain = new URL(item.url).hostname; } catch(e) { domain = "link"; }
-
-                    let opacity = 1.0;
-                    if (catName === 'The Queue') {
-                        const age = (Date.now() - item.timestamp) / (1000 * 60 * 60 * 24);
-                        if (age > 7) opacity = 0.3; else if (age > 3) opacity = 0.6;
-                    }
-
-                    // SHOW CONTROLS IF: Not Library OR Edit Mode is ON
-                    const showControls = (catName !== 'The Library' || editMode);
-
-                    gridHtml += `
-                        <div class="tile" style="opacity: ${opacity}">
-                            ${showControls ? `
-                                <div class="tile-controls">
-                                    ${catName !== 'The Archives' ? `<button class="btn move-btn" onclick="moveMe('${item.id}', event)">✓</button>` : ''}
-                                    <button class="btn del-btn" onclick="deleteMe('${item.id}', event)">✕</button>
-                                </div>` : ''}
-                            <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; height:100%; display:flex; flex-direction:column;">
-                                <div class="tile-cover"><img src="https://unavatar.io/${domain}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}&background=random'"></div>
-                                <div class="tile-info"><div class="tile-name">${item.name}</div></div>
-                            </a>
-                        </div>`;
-                });
-                gridHtml += `</div></div>`;
-                content.innerHTML += gridHtml;
-            });
-        }
-
-        window.onload = function() {
-            db.collection("bookmarks").orderBy("timestamp", "desc").onSnapshot((snap) => {
-                lastSnap = snap; // Store snapshot for edit-mode refreshes
-                renderVault(snap);
-            });
-        };
-    </script>
 </head>
 <body>
+
     <h1>The Vault <button id="edit-btn" class="edit-toggle" onclick="toggleEdit()">EDIT LIBRARY</button></h1>
+    
     <div id="vault-content"></div>
+
+    <div id="reader-overlay">
+        <button class="reader-close" onclick="closeReader()">CLOSE</button>
+        <div id="reader-content"></div>
+    </div>
 
     <div class="admin-panel">
         <div class="form-row">
@@ -159,5 +75,127 @@
         <input type="text" id="siteUrl" placeholder="URL">
         <button id="main-add" onclick="addBookmark()">Add to Vault</button>
     </div>
+
+    <script>
+        // Your Firebase Config (Keep yours)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAci66jWCRg_X6FfCWz8FYNKtRqWM--O4s",
+            authDomain: "thevault-fb14e.firebaseapp.com",
+            projectId: "thevault-fb14e",
+            storageBucket: "thevault-fb14e.firebasestorage.app",
+            messagingSenderId: "181855705164",
+            appId: "1:181855705164:web:2508720fe5669d4f0ebce9"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        let editMode = false;
+        let lastSnap = null;
+
+        function toggleEdit() {
+            editMode = !editMode;
+            const btn = document.getElementById('edit-btn');
+            btn.innerText = editMode ? "DONE" : "EDIT LIBRARY";
+            btn.classList.toggle('edit-active');
+            if(lastSnap) renderVault(lastSnap);
+        }
+
+        async function openReader(url) {
+            const overlay = document.getElementById('reader-overlay');
+            const content = document.getElementById('reader-content');
+            overlay.style.display = 'block';
+            content.innerHTML = "<h2>Fetching article...</h2><p>Wait a second while we clean the page.</p>";
+
+            try {
+                // We use a proxy to get around CORS
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl);
+                const data = await response.json();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+                
+                // Readability magic happens here
+                const reader = new Readability(doc);
+                const article = reader.parse();
+
+                if (article) {
+                    content.innerHTML = `<h1>${article.title}</h1><p style="color:#888; font-size:14px;">${article.byline || ''}</p><hr>${article.content}`;
+                } else {
+                    throw new Error("Could not parse");
+                }
+            } catch (e) {
+                content.innerHTML = `<h2>Failed to load reader mode.</h2><p>This site might be blocked or too complex.</p><br><a href="${url}" target="_blank" style="color:#0A84FF">Open in browser instead</a>`;
+            }
+        }
+
+        function closeReader() { document.getElementById('reader-overlay').style.display = 'none'; }
+
+        // Your existing Firebase CRUD logic
+        async function addBookmark() {
+            const name = document.getElementById('siteName').value;
+            let url = document.getElementById('siteUrl').value;
+            const cat = document.getElementById('siteCat').value;
+            if(!name || !url) return alert("Fill all fields");
+            if(!url.startsWith('http')) url = 'https://' + url;
+            await db.collection("bookmarks").add({ name, url, category: cat, timestamp: Date.now() });
+            document.getElementById('siteName').value = ''; document.getElementById('siteUrl').value = '';
+        }
+
+        async function deleteMe(id, e) {
+            e.preventDefault(); e.stopPropagation();
+            if(confirm("Delete?")) await db.collection("bookmarks").doc(id).delete();
+        }
+
+        async function moveMe(id, e) {
+            e.preventDefault(); e.stopPropagation();
+            await db.collection("bookmarks").doc(id).update({ category: "The Archives" });
+        }
+
+        function renderVault(snap) {
+            const cats = { "The Library": [], "The Queue": [], "The Archives": [] };
+            snap.forEach(doc => {
+                const data = doc.data();
+                let c = data.category;
+                if (c === "Source") c = "The Library";
+                if (c === "To Be Read") c = "The Queue";
+                if (c === "Read") c = "The Archives";
+                if (cats[c]) cats[c].push({ id: doc.id, ...data });
+            });
+
+            const vault = document.getElementById('vault-content');
+            vault.innerHTML = '';
+            ["The Library", "The Queue", "The Archives"].forEach(catName => {
+                const items = cats[catName];
+                if (!items || items.length === 0) return;
+                let html = `<div class="category-section"><div class="category-title">${catName}</div><div class="tile-grid">`;
+                items.forEach(item => {
+                    let dom = "link"; try { dom = new URL(item.url).hostname; } catch(e){}
+                    let op = 1;
+                    if(catName === "The Queue"){
+                        const age = (Date.now()-item.timestamp)/(1000*60*60*24);
+                        if(age>7) op=0.3; else if(age>3) op=0.6;
+                    }
+                    const controls = (catName !== "The Library" || editMode);
+                    html += `
+                        <div class="tile" style="opacity:${op}">
+                            ${controls ? `<div class="tile-controls">
+                                ${catName !== "The Archives" ? `<button class="btn move-btn" onclick="moveMe('${item.id}', event)">✓</button>` : ''}
+                                <button class="btn del-btn" onclick="deleteMe('${item.id}', event)">✕</button>
+                            </div>` : ''}
+                            <div class="tile-cover" onclick="openReader('${item.url}')">
+                                <img src="https://unavatar.io/${dom}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(item.name)}'">
+                            </div>
+                            <div class="tile-info"><div class="tile-name">${item.name}</div></div>
+                        </div>`;
+                });
+                vault.innerHTML += html + `</div></div>`;
+            });
+        }
+
+        window.onload = function() {
+            db.collection("bookmarks").orderBy("timestamp", "desc").onSnapshot(snap => { lastSnap = snap; renderVault(snap); });
+        };
+    </script>
 </body>
 </html>
