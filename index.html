@@ -52,7 +52,12 @@
             if (!url.startsWith('http')) url = 'https://' + url;
 
             try {
-                await db.collection("bookmarks").add({ name, url, category: cat, timestamp: Date.now() });
+                await db.collection("bookmarks").add({ 
+                    name, 
+                    url, 
+                    category: cat, 
+                    timestamp: Date.now() 
+                });
                 document.getElementById('siteName').value = '';
                 document.getElementById('siteUrl').value = '';
             } catch (e) { alert(e.message); }
@@ -65,7 +70,8 @@
 
         async function moveMe(id, e) {
             e.preventDefault(); e.stopPropagation();
-            await db.collection("bookmarks").doc(id).update({ category: "Read" });
+            // Moves item to the Archive shelf
+            await db.collection("bookmarks").doc(id).update({ category: "The Archives" });
         }
 
         window.onload = function() {
@@ -80,16 +86,26 @@
                 const content = document.getElementById('vault-content');
                 content.innerHTML = '';
 
-                Object.keys(cats).sort().forEach(catName => {
-                    let gridHtml = `<div class="category-section"><div class="category-title">${catName}</div><div class="tile-grid">`;
-                    cats[catName].forEach(item => {
+                // MANDATORY SHELF ORDER
+                const shelfOrder = ["The Library", "The Queue", "The Archives"];
+
+                shelfOrder.forEach(catName => {
+                    const items = cats[catName];
+                    if (!items || items.length === 0) return;
+
+                    let gridHtml = `
+                        <div class="category-section">
+                            <div class="category-title">${catName}</div>
+                            <div class="tile-grid">`;
+
+                    items.forEach(item => {
                         let domain = "";
                         try { domain = new URL(item.url).hostname; } catch(e) { domain = "link"; }
                         
                         gridHtml += `
                             <div class="tile">
                                 <div class="tile-controls">
-                                    ${item.category !== 'Read' ? `<button class="btn move-btn" onclick="moveMe('${item.id}', event)">✓</button>` : ''}
+                                    ${item.category !== 'The Archives' ? `<button class="btn move-btn" onclick="moveMe('${item.id}', event)">✓</button>` : ''}
                                     <button class="btn del-btn" onclick="deleteMe('${item.id}', event)">✕</button>
                                 </div>
                                 <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; height:100%; display:flex; flex-direction:column;">
@@ -100,6 +116,7 @@
                                 </a>
                             </div>`;
                     });
+
                     gridHtml += `</div></div>`;
                     content.innerHTML += gridHtml;
                 });
@@ -114,9 +131,9 @@
         <div class="form-row">
             <input type="text" id="siteName" placeholder="Name">
             <select id="siteCat">
-                <option value="To Be Read">To Be Read</option>
-                <option value="Source">Source</option>
-                <option value="Read">Read</option>
+                <option value="The Library">The Library</option>
+                <option value="The Queue">The Queue</option>
+                <option value="The Archives">The Archives</option>
             </select>
         </div>
         <input type="text" id="siteUrl" placeholder="URL (e.g. apple.com)" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
