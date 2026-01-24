@@ -98,24 +98,29 @@
                             <div class="category-title">${catName}</div>
                             <div class="tile-grid">`;
 
-                    items.forEach(item => {
-                        let domain = "";
-                        try { domain = new URL(item.url).hostname; } catch(e) { domain = "link"; }
-                        
-                        gridHtml += `
-                            <div class="tile">
-                                <div class="tile-controls">
-                                    ${item.category !== 'The Archives' ? `<button class="btn move-btn" onclick="moveMe('${item.id}', event)">✓</button>` : ''}
-                                    <button class="btn del-btn" onclick="deleteMe('${item.id}', event)">✕</button>
-                                </div>
-                                <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; height:100%; display:flex; flex-direction:column;">
-                                    <div class="tile-cover">
-                                        <img src="https://unavatar.io/${domain}" onerror="this.src='https://ui-avatars.com/api/?name=${item.name}&background=random'">
-                                    </div>
-                                    <div class="tile-info"><div class="tile-name">${item.name}</div></div>
-                                </a>
-                            </div>`;
-                    });
+                   items.forEach(item => {
+    let domain = "";
+    try { domain = new URL(item.url).hostname; } catch(e) { domain = "link"; }
+    
+    // Only show controls if it's NOT the Library
+    const showControls = item.category !== 'The Library';
+    
+    gridHtml += `
+        <div class="tile">
+            ${showControls ? `
+                <div class="tile-controls">
+                    ${item.category !== 'The Archives' ? `<button class="btn move-btn" onclick="moveMe('${item.id}', event)">✓</button>` : ''}
+                    <button class="btn del-btn" onclick="deleteMe('${item.id}', event)">✕</button>
+                </div>
+            ` : ''}
+            <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; height:100%; display:flex; flex-direction:column;">
+                <div class="tile-cover">
+                    <img src="https://unavatar.io/${domain}" onerror="this.src='https://ui-avatars.com/api/?name=${item.name}&background=random'">
+                </div>
+                <div class="tile-info"><div class="tile-name">${item.name}</div></div>
+            </a>
+        </div>`;
+});
 
                     gridHtml += `</div></div>`;
                     content.innerHTML += gridHtml;
